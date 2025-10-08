@@ -4,7 +4,7 @@ commonAnnotations: {}
 # Nautobot UI front end service
 service:
   # -- (`ExternalName`, `ClusterIP`, `NodePort`, or `LoadBalancer`) [[ref](https://kubernetes.io/docs/concepts/services-networking/service/)] Kubernetes service type, valid values: `ExternalName`, `ClusterIP`, `NodePort`, or `LoadBalancer`
-  type: "ClusterIP"
+  type: "NodePort"
   # -- Port to expose for Nautobot http access
   port: 80
   # -- Port to expose for Nautobot https access
@@ -12,9 +12,9 @@ service:
   # Node ports to expose if service.type is NodePort
   nodePorts:
     # -- (int) Node port for Nautobot http choose port in Kubernetes `--service-node-port-range` typically 30000-32767
-    http:  # yamllint disable-line rule:empty-values
+    http: 30080  # yamllint disable-line rule:empty-values
     # -- (int) Node port for Nautobot https choose port in Kubernetes `--service-node-port-range` typically 30000-32767
-    https:  # yamllint disable-line rule:empty-values
+    https: 30443 # yamllint disable-line rule:empty-values
     # -- (int) Node port for Nautobot uwsgimetrics choose port in Kubernetes `--service-node-port-range` typically 30000-32767
     uwsgimetrics:  # yamllint disable-line rule:empty-values
   # -- (IP) IP address to use as the clusterIP
@@ -41,7 +41,7 @@ nautobot:
     # -- Nautobot image name, common to all deployments
     repository: "nautobot/nautobot"
     # -- Nautobot image tag, common to all deployments
-    tag: "2.4.17-py3.11"
+    tag: "3.0.0-alpha.2"
     # -- [Kubernetes image pull policy](https://kubernetes.io/docs/concepts/containers/images/), common to all deployments valid values: `Always`, `Never`, or `IfNotPresent`
     pullPolicy: "Always"
     # -- ([]string) List of secret names to be used as image [pull secrets](https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/), common to all deployments
@@ -51,7 +51,7 @@ nautobot:
     #   - myRegistryKeySecretName
 
   # -- Number of Nautobot server replicas to deploy
-  replicaCount: 2
+  replicaCount: 1
   # -- [[ref](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#clean-up-policy)] Number of old ReplicaSets to retain
   revisionHistoryLimit: 3
 
@@ -59,7 +59,7 @@ nautobot:
   # @default -- See values.yaml
   livenessProbe:
     # -- Enable the Nautobot Liveness Probe
-    enabled: true
+    enabled: false
     exec:
       command:
         - "bash"
@@ -77,7 +77,7 @@ nautobot:
   # -- (Probe) [[ref](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#configure-probes)] Nautobot readiness probe
   # @default -- See values.yaml
   readinessProbe:
-    enabled: true
+    enabled: false
     httpGet:
       path: "/health/"
       port: "http"
@@ -105,10 +105,11 @@ nautobot:
   resources:
     requests:
       cpu: "300m"
-      memory: "1280M"
+      memory: "512Mi"
     limits:
       cpu: "1000m"
-      memory: "8704M"
+      memory: "10Gi"
+  
 
   # -- (PodSecurityContext) [[ref](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod)] Nautobot Pods Security Context
   # @default -- See values.yaml
@@ -338,7 +339,7 @@ nautobot:
     # -- (Probe) [[ref](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#configure-probes)] NGINX liveness probe
     # @default -- See values.yaml
     livenessProbe:
-      enabled: true
+      enabled: false
       tcpSocket:
         port: "https-nginx"
       initialDelaySeconds: 2
@@ -350,7 +351,7 @@ nautobot:
     # -- (Probe) [[ref](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#configure-probes)] NGINX readiness probe
     # @default -- See values.yaml
     readinessProbe:
-      enabled: true
+      enabled: false
       httpGet:
         path: "/"
         port: "metrics"
@@ -461,13 +462,13 @@ nautobot:
 
   uwsgi:
     # -- Disable HTTPS and use only HTTP protocol in uwsgi.ini configuration
-    disableHttps: false
+    disableHttps: true
     # -- [[ref](https://uwsgi-docs.readthedocs.io/en/latest/Options.html#listen)] Set the uWSGI socket listen queue size.<sup>[1](#notes)</sup>
     listen: 128
     # -- [[ref](https://uwsgi-docs.readthedocs.io/en/latest/Options.html#processes)] Spawn the specified number of workers/processes<sup>[1](#notes)</sup>
-    processes: 3
+    processes: 1
     # -- [[ref](https://uwsgi-docs.readthedocs.io/en/latest/Options.html#threads)] Run each worker in prethreaded mode with the specified number of threads<sup>[1](#notes)</sup>
-    threads: 2
+    threads: 1
     # -- [[ref](https://uwsgi-docs.readthedocs.io/en/latest/Options.html#buffer-size)] Set the max size of a request (request-body excluded), this generally maps to the size of request headers. By default it is 4k. If you receive a bigger request (for example with big cookies or query string) you may need to increase it. It is a security measure too, so adapt to your app needs instead of maxing it out.<sup>[1](#notes)</sup>
     bufferSize: 4096
     # -- [[ref]](https://uwsgi-docs.readthedocs.io/en/latest/Options.html#harakiri) Set the harakiri timeout value. If the value is 0 then the timeout is not set.
@@ -558,14 +559,14 @@ celery:
   # -- [[ref](https://docs.nautobot.com/projects/core/en/stable/administration/celery-queues/#concurrency-setting)]Concurrency Setting (0: use the default which is the number of CPUs available on your system)<sup>[2](#notes)</sup>
   concurrency: 0
   # -- Number of Nautobot Celery Workers replicas to deploy
-  replicaCount: 2
+  replicaCount: 1
   # -- [[ref](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#clean-up-policy)] Number of old ReplicaSets to retain
   revisionHistoryLimit: 3
 
   # -- (Probe) [[ref](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#configure-probes)] Nautobot Celery Worker liveness probe
   # @default -- See values.yaml
   livenessProbe:
-    enabled: true
+    enabled: false
     exec:
       command:
         - "bash"
@@ -583,7 +584,7 @@ celery:
   # -- (Probe) [[ref](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#configure-probes)] Nautobot Celery Worker readiness probe
   # @default -- See values.yaml
   readinessProbe:
-    enabled: true
+    enabled: false
     exec:
       command:
         - "bash"
@@ -600,10 +601,10 @@ celery:
   resources:
     requests:
       cpu: "400m"
-      memory: "1G"
+      memory: "1024Mi"
     limits:
       cpu: "3328m"
-      memory: "6656M"
+      memory: "4096Mi"
 
   # -- (PodSecurityContext) [[ref](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod)] Nautobot Celery Worker Pods Security Context
   # @default -- See values.yaml
@@ -919,7 +920,7 @@ metrics:
     # -- (Probe) [[ref](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#configure-probes)] NGINX Exporter liveness probe
     # @default -- See values.yaml
     livenessProbe:
-      enabled: true
+      enabled: false
       httpGet:
         path: "/"
         port: "nginxmetrics"
@@ -932,7 +933,7 @@ metrics:
     # -- (Probe) [[ref](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#configure-probes)] NGINX Exporter readiness probe
     # @default -- See values.yaml
     readinessProbe:
-      enabled: true
+      enabled: false
       httpGet:
         path: "/metrics"
         port: "nginxmetrics"
@@ -985,7 +986,7 @@ metrics:
     # -- (Probe) [[ref](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#configure-probes)] uWSGI Exporter liveness probe
     # @default -- See values.yaml
     livenessProbe:
-      enabled: true
+      enabled: false
       httpGet:
         path: "/-/healthy"
         port: "uwsgimetrics"
@@ -998,7 +999,7 @@ metrics:
     # -- (Probe) [[ref](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#configure-probes)] uWSGI Exporter readiness probe
     # @default -- See values.yaml
     readinessProbe:
-      enabled: true
+      enabled: false
       httpGet:
         path: "/metrics"
         port: "uwsgimetrics"
@@ -1131,6 +1132,143 @@ redis:
         type: "RuntimeDefault"
   serviceAccount:
     automountServiceAccountToken: false
+
+mariadb:
+  # -- Enable deployment of the [Bitnami mariadb](https://github.com/bitnami/charts/tree/master/bitnami/mariadb) chart, all other `redis.*` parameters will be passed directly to that chart
+  enabled: false
+  auth:
+    # -- [[ref](https://github.com/bitnami/charts/tree/master/bitnami/mariadb#mariadb-common-parameters)] MariaDB database name
+    database: "nautobot"
+    # -- [[ref](https://github.com/bitnami/charts/tree/master/bitnami/mariadb#mariadb-common-parameters)] MariaDB username
+    username: "nautobot"
+    # -- [[ref](https://github.com/bitnami/charts/tree/master/bitnami/mariadb#mariadb-common-parameters)] MariaDB user password
+    password: ""
+    # -- [[ref](https://github.com/bitnami/charts/tree/master/bitnami/mariadb#mariadb-common-parameters)] MariaDB root user password
+    rootPassword: ""
+  image:
+    repository: "bitnamilegacy/mariadb"
+    tag: "11.2.3-debian-11-r5"
+    pullPolicy: "Always"
+  metrics:
+    containerSecurityContext:
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true
+      capabilities:
+        drop:
+          - "ALL"
+  primary:
+    containerSecurityContext:
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: false  # Must be set to false
+      capabilities:
+        drop:
+          - "ALL"
+    podSecurityContext:
+      seccompProfile:
+        type: "RuntimeDefault"
+    extraEnvVars:
+      - name: "MARIADB_CHARACTER_SET"
+        value: "utf8mb4"
+      - name: "MARIADB_COLLATE"
+        value: "utf8mb4_bin"
+  secondary:
+    containerSecurityContext:
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: false  # Must be set to false
+      capabilities:
+        drop:
+          - "ALL"
+    podSecurityContext:
+      seccompProfile:
+        type: "RuntimeDefault"
+    extraEnvVars:
+      - name: "MARIADB_CHARACTER_SET"
+        value: "utf8mb4"
+      - name: "MARIADB_COLLATE"
+        value: "utf8mb4_bin"
+
+postgresqlha:
+  # -- Enable deployment of the [Bitnami postgresql-ha](https://github.com/bitnami/charts/tree/master/bitnami/postgresql-ha) chart, all other `postgresql-ha.*` parameters will be passed directly to that chart
+  enabled: false
+  image:
+    repository: "bitnamilegacy/postgresql-repmgr"
+    tag: "16.2.0-debian-11-r2"
+    pullPolicy: "Always"
+  postgresql:
+    # -- [[ref](https://github.com/bitnami/charts/tree/master/bitnami/postgresql-ha#postgresql-with-repmgr-parameters)] PostgreSQL database name
+    database: "nautobot"
+    # -- [[ref](https://github.com/bitnami/charts/tree/master/bitnami/postgresql-ha#postgresql-with-repmgr-parameters)] PostgreSQL postgres user password
+    postgresPassword: ""
+    # -- [[ref](https://github.com/bitnami/charts/tree/master/bitnami/postgresql-ha#postgresql-with-repmgr-parameters)] PostgreSQL Repmgr password
+    repmgrPassword: ""
+    # -- [[ref](https://github.com/bitnami/charts/tree/master/bitnami/postgresql-ha#postgresql-with-repmgr-parameters)] PostgreSQL username
+    username: "nautobot"
+    # -- [[ref](https://github.com/bitnami/charts/tree/master/bitnami/postgresql-ha#postgresql-with-repmgr-parameters)] PostgreSQL user password
+    password: ""
+    pdb:
+      # -- [[ref](https://github.com/bitnami/charts/tree/master/bitnami/postgresql-ha#postgresql-with-repmgr-parameters)] Enable a Pod Distribution Budget for Postgres
+      create: true
+    podSecurityContext:
+      enabled: true
+      seccompProfile:
+        type: "RuntimeDefault"
+    containerSecurityContext:
+      enabled: true
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: false  # Must be set to false
+      seccompProfile:
+        type: "RuntimeDefault"
+      capabilities:
+        drop:
+          - "ALL"
+  postgresqlImage:
+    pullPolicy: "Always"
+  metrics:
+    podSecurityContext:
+      enabled: true
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true
+      seccompProfile:
+        type: "RuntimeDefault"
+      capabilities:
+        drop:
+          - "ALL"
+  metricsImage:
+    pullPolicy: "Always"
+  pgpool:
+    # -- [[ref](https://github.com/bitnami/charts/tree/master/bitnami/postgresql-ha#pgpool-parameters)] Pgpool Admin password
+    adminPassword: ""
+    # -- [[ref](https://github.com/bitnami/charts/tree/master/bitnami/postgresql-ha#pgpool-parameters)] Name of the database to perform streaming replication checks
+    srCheckDatabase: "nautobot"
+    # -- [[ref](https://github.com/bitnami/charts/tree/master/bitnami/postgresql-ha#pgpool-parameters)] The number of replicas to deploy
+    replicaCount: 1
+    # -- [[ref](https://github.com/bitnami/charts/tree/master/bitnami/postgresql-ha#pgpool-parameters)] Strategy used to replace old Pgpool Pods by new ones
+    # @default -- See values.yaml
+    updateStrategy:
+      type: "RollingUpdate"
+      rollingUpdate:
+        maxSurge: 1
+        maxUnavailable: 0
+    pdb:
+      # -- [[ref](https://github.com/bitnami/charts/tree/master/bitnami/postgresql-ha#pgpool-parameters)] Enable a Pod Distribution Budget for Pgpool
+      create: true
+    containerSecurityContext:
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: false  # Must be set to false
+      seccompProfile:
+        type: "RuntimeDefault"
+      capabilities:
+        drop:
+          - "ALL"
+  pgpoolImage:
+    pullPolicy: "Always"
+
+rabbitmq:
+  # -- Enable deployment of the [Bitnami RabbitMQ](https://github.com/bitnami/charts/tree/main/bitnami/rabbitmq) chart, all other `rabbitmq.*` parameters will be passed directly to that chart
+  enabled: false
+  image:
+    repository: "bitnamilegacy/rabbitmq"
+    tag: "3.13.7-debian-12-r2"
 
 # -- Deploy additional Kubernetes manifests
 extraObjects: []
